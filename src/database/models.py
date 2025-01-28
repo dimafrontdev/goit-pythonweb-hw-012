@@ -1,3 +1,4 @@
+from typing import Optional
 from datetime import datetime
 
 from sqlalchemy import Integer, String, func, ForeignKey, Boolean
@@ -15,6 +16,7 @@ class User(Base):
     username = mapped_column(String, unique=True)
     email = mapped_column(String, unique=True)
     hashed_password = mapped_column(String)
+    refresh_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at = mapped_column(DateTime, default=func.now())
     avatar = mapped_column(String(255), nullable=True)
     confirmed = mapped_column(Boolean, default=False)

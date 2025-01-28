@@ -25,6 +25,9 @@ class UserService:
     async def get_user_by_username(self, username: str):
         return await self.repository.get_user_by_username(username)
 
+    async def get_user_by_refresh_token(self, username: str, refresh_token: str):
+        return await self.repository.get_user_by_refresh_token(username, refresh_token)
+
     async def get_user_by_email(self, email: str):
         return await self.repository.get_user_by_email(email)
 

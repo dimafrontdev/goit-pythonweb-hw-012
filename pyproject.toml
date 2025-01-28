@@ -26,6 +26,7 @@ pydantic-settings = "^2.7.1"
 slowapi = "^0.1.9"
 fastapi-mail = "^1.4.2"
 cloudinary = "^1.42.1"
+redis = "^5.2.1"
 
 
 [build-system]
