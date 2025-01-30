@@ -14,6 +14,8 @@ from src.schemas import (
     RequestEmail,
     Token,
     TokenRefreshRequest,
+    PasswordResetRequest,
+    PasswordResetConfirm,
 )
 from src.services.auth import (
     create_access_token,
@@ -21,10 +23,12 @@ from src.services.auth import (
     get_email_from_token,
     create_refresh_token,
     verify_refresh_token,
+    create_password_reset_token,
+    get_email_from_reset_token,
 )
 from src.services.users import UserService
 from src.database.db import get_db
-from src.services.email import send_email
+from src.services.email import send_email, send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -147,3 +151,49 @@ async def request_email(
             send_email, user.email, user.username, request.base_url
         )
     return {"message": "Перевірте свою електронну пошту для підтвердження"}
+
+
+@router.post("/request_password_reset")
+async def request_password_reset(
+    body: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user_service = UserService(db)
+    user = await user_service.get_user_by_email(body.email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Користувача з таким email не знайдено",
+        )
+
+    # Create reset token
+    token = create_password_reset_token(user.email, expires_hours=1)
+    # Send email with the reset link
+    background_tasks.add_task(
+        send_password_reset_email, user.email, request.base_url, token
+    )
+    return {"message": "Посилання для скидання пароля відправлено на ваш email."}
+
+
+@router.post("/confirm_password_reset")
+async def confirm_password_reset(
+    body: PasswordResetConfirm, db: Session = Depends(get_db)
+):
+    email = await get_email_from_reset_token(body.token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Невірний або прострочений токен",
+        )
+    user_service = UserService(db)
+    user = await user_service.get_user_by_email(email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Користувач не знайдений"
+        )
+
+    hashed_password = Hash().get_password_hash(body.new_password)
+    await user_service.update_password(email, hashed_password)
+    return {"message": "Пароль успішно змінено"}

@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from libgravatar import Gravatar
+from sqlalchemy.sql.functions import user
 
 from src.repository.users import UserRepository
 from src.schemas import UserCreate
@@ -36,3 +37,6 @@ class UserService:
 
     async def update_avatar_url(self, email: str, url: str):
         return await self.repository.update_avatar_url(email, url)
+
+    async def update_password(self, email: str, hashed_password: str):
+        return await self.repository.update_password(email, hashed_password)

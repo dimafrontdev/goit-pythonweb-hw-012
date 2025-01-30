@@ -64,6 +64,16 @@ async def create_refresh_token(data: dict, expires_delta: Optional[float] = None
     return refresh_token
 
 
+def create_password_reset_token(email: str, expires_hours: int = 1) -> str:
+    now = datetime.now(UTC)
+    expire = now + timedelta(hours=expires_hours)
+    to_encode = {"sub": email, "exp": expire, "iat": now, "token_type": "reset"}
+    encoded_jwt = jwt.encode(
+        to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM
+    )
+    return encoded_jwt
+
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
@@ -137,6 +147,22 @@ async def get_email_from_token(token: str):
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Неправильний токен для перевірки електронної пошти",
         )
+
+
+async def get_email_from_reset_token(token: str) -> Optional[str]:
+    try:
+        payload = jwt.decode(
+            token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
+        )
+        token_type = payload.get("token_type")
+        if token_type != "reset":
+            return None
+        email = payload.get("sub")
+        if email is None:
+            return None
+        return email
+    except JWTError:
+        return None
 
 
 async def get_current_admin_user(current_user: User = Depends(get_current_user)):
