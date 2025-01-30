@@ -1,13 +1,19 @@
 from typing import Optional
 from datetime import datetime
+from enum import Enum
 
-from sqlalchemy import Integer, String, func, ForeignKey, Boolean
+from sqlalchemy import Integer, String, func, ForeignKey, Boolean, Enum as SqlEnum
 from sqlalchemy.orm import relationship, mapped_column, Mapped, DeclarativeBase
 from sqlalchemy.sql.sqltypes import DateTime
 
 
 class Base(DeclarativeBase):
     pass
+
+
+class UserRole(str, Enum):
+    USER = "user"
+    ADMIN = "admin"
 
 
 class User(Base):
@@ -20,6 +26,7 @@ class User(Base):
     created_at = mapped_column(DateTime, default=func.now())
     avatar = mapped_column(String(255), nullable=True)
     confirmed = mapped_column(Boolean, default=False)
+    role = mapped_column(SqlEnum(UserRole), default=UserRole.USER, nullable=False)
 
 
 class Contact(Base):

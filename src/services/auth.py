@@ -9,10 +9,16 @@ from jose import JWTError, jwt
 
 from src.database.db import get_db
 from src.conf.config import settings
+from src.database.models import UserRole, User
 from src.services.users import UserService
-from src.database.models import User
 
-from sqlalchemy import select
+import pickle
+import redis.asyncio as redis
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+redis_client = redis.Redis(
+    host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=False
+)
 
 
 class Hash:
@@ -23,9 +29,6 @@ class Hash:
 
     def get_password_hash(self, password: str):
         return self.pwd_context.hash(password)
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def create_token(
@@ -79,10 +82,20 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
+
+    cached_user = await redis_client.get(f"user:{username}")
+    if cached_user:
+        user = pickle.loads(cached_user)
+        return user
+
     user_service = UserService(db)
     user = await user_service.get_user_by_username(username)
     if user is None:
         raise credentials_exception
+
+    await redis_client.setex(
+        f"user:{username}", timedelta(minutes=10), pickle.dumps(user)
+    )
     return user
 
 
@@ -124,3 +137,10 @@ async def get_email_from_token(token: str):
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Неправильний токен для перевірки електронної пошти",
         )
+
+
+async def get_current_admin_user(current_user: User = Depends(get_current_user)):
+    print(current_user.role)
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Недостатньо прав доступу")
+    return current_user

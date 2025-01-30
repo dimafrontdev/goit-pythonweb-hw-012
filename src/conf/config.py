@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: int = 326488457974591
     CLOUDINARY_API_SECRET: str = "secret"
 
+    REDIS_PORT: int = 6379
+    REDIS_HOST: str = "localhost"
+
     model_config = ConfigDict(
         extra="ignore", env_file=".env", env_file_encoding="utf-8", case_sensitive=True
     )
