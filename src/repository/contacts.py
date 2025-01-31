@@ -102,7 +102,7 @@ class ContactRepository:
         """
         contact = await self.get_contact_by_id(contact_id, user)
         if contact:
-            for key, value in body.dict(exclude_unset=True).items():
+            for key, value in body.model_dump(exclude_unset=True).items():
                 setattr(contact, key, value)
             await self.db.commit()
             await self.db.refresh(contact)
